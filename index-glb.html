@@ -62,6 +62,66 @@ body {
     color: #a5b4fc;
 }
 
+/* Annotations split button + dropdown */
+.btn-group {
+    position: relative;
+    display: inline-flex;
+}
+.btn-group .btn-main {
+    border-radius: 6px 0 0 6px;
+    border-right: none;
+}
+.btn-group .btn-drop {
+    border-radius: 0 6px 6px 0;
+    padding: 6px 7px;
+    font-size: 9px;
+    border-left: 1px solid rgba(255,255,255,0.1);
+}
+.btn-group .btn-main.active + .btn-drop {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.5);
+    color: #a5b4fc;
+}
+.btn-group .btn-drop:hover {
+    background: rgba(99, 102, 241, 0.4);
+}
+.btn-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: #1e1e1e;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    padding: 4px 0;
+    min-width: 140px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    z-index: 500;
+}
+.btn-dropdown.visible { display: block; }
+.btn-dropdown button {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: #ccc;
+    padding: 7px 14px;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 0;
+    white-space: nowrap;
+}
+.btn-dropdown button:hover {
+    background: rgba(99, 102, 241, 0.2);
+    color: #fff;
+}
+.btn-dropdown .dd-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+    margin: 4px 0;
+}
+
 /* Help panel */
 #help-panel {
     position: absolute;
@@ -420,107 +480,37 @@ model-viewer {
 }
 #import-file { display: none; }
 
-/* Recent annotations panel */
-#recent-panel {
+/* Floating label popup menu */
+#fl-popup-menu {
     position: absolute;
-    bottom: 20px;
-    right: 10px;
-    width: 320px;
-    max-height: 280px;
-    background: rgba(18, 18, 18, 0.9);
+    display: none;
+    background: rgba(30, 30, 30, 0.95);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px;
-    z-index: 100;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 4px 0;
+    z-index: 500;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
-#recent-panel .rp-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-#recent-panel .rp-header span {
-    font-size: 12px;
-    font-weight: 600;
-    color: #a5b4fc;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-}
-#recent-panel .rp-header .rp-count {
-    font-size: 11px;
-    color: #666;
-    font-weight: 400;
-    text-transform: none;
-}
-#recent-panel .rp-body {
-    overflow-y: auto;
-    flex: 1;
-    padding: 6px 0;
-}
-#recent-panel .rp-empty {
-    text-align: center;
-    color: #555;
-    font-size: 12px;
-    font-style: italic;
-    padding: 20px 14px;
-}
-.rp-item {
-    padding: 8px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.rp-item:hover { background: rgba(99,102,241,0.08); }
-.rp-item:last-child { border-bottom: none; }
-.rp-item .rp-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-.rp-item .rp-name {
-    font-size: 12px;
+#fl-popup-menu.visible { display: block; }
+#fl-popup-menu .fpm-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
     color: #e0e0e0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
+    padding: 8px 16px;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
 }
-.rp-item .rp-date {
-    font-size: 10px;
-    color: #666;
-    white-space: nowrap;
+#fl-popup-menu .fpm-item:hover {
+    background: rgba(99, 102, 241, 0.25);
+    color: #fff;
 }
-.rp-item .rp-bottom {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 3px;
-}
-.rp-item .rp-remarks {
-    font-size: 11px;
-    color: #777;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-}
-.status-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-.status-dot.good { background: #4ade80; }
-.status-dot.needs-repair { background: #facc15; }
-.status-dot.critical { background: #f87171; }
-.status-dot.replaced { background: #a5b4fc; }
-.status-dot.pending { background: #9ca3af; }
+
+
 
 /* Part locator pin */
 #part-pin {
@@ -687,8 +677,14 @@ model-viewer {
         <button id="btn-rotate" onclick="toggleRotate()">Auto Rotate</button>
         <button id="btn-wireframe" onclick="toggleBackground()">Light BG</button>
         <button id="btn-reset" onclick="resetView()">Reset View</button>
-        <button id="btn-annotations" onclick="toggleAnnotationsPanel()">Annotations</button>
-        <button id="btn-labels" class="active" onclick="toggleFloatingLabels()">3D Labels</button>
+        <div class="btn-group">
+            <button id="btn-labels" class="btn-main active" onclick="toggleFloatingLabels()">Annotations</button>
+            <button class="btn-drop" onclick="toggleAnnotationsDropdown(event)">&#9662;</button>
+            <div class="btn-dropdown" id="annotations-dropdown">
+                <button onclick="toggleAnnotationsPanel(); closeAnnotationsDropdown()">View All</button>
+                <button onclick="exportPDF(); closeAnnotationsDropdown()">Export PDF</button>
+            </div>
+        </div>
         <button id="btn-help" class="active" onclick="toggleHelp()">Help</button>
         <label style="display:flex;align-items:center;gap:6px;color:#aaa;font-size:12px;">Brightness
             <input type="range" id="exposure-slider" min="0.2" max="2.0" step="0.05" value="0.7"
@@ -709,15 +705,14 @@ model-viewer {
 <div id="help-panel">
     <span class="key">Left Click</span> Select part<br>
     <span class="key">Right Click</span> Add annotation<br>
-    <span class="key">Hold + Drag</span> Rotate model<br>
+    <span class="key">Left Drag</span> Rotate model<br>
+    <span class="key">Right Drag</span> Pan / move view<br>
     <span class="key">Scroll</span> Zoom in / out
 </div>
 
 <!-- Context menu -->
 <div id="context-menu">
-    <button class="ctx-item" onclick="openAnnotationForm()">&#128221; Add Annotation</button>
-    <div class="ctx-divider"></div>
-    <button class="ctx-item" onclick="viewPartAnnotations()">&#128196; View Part Annotations</button>
+    <button class="ctx-item" onclick="openAnnotationForm()">Add Annotation</button>
 </div>
 
 <!-- Annotation modal -->
@@ -753,10 +748,6 @@ model-viewer {
     <div class="ap-header">
         <h2>Inspection Annotations</h2>
         <div class="ap-actions">
-            <button onclick="exportJSON()">Export JSON</button>
-            <button onclick="document.getElementById('import-file').click()">Import JSON</button>
-            <button onclick="exportPDF()">Export PDF</button>
-            <input type="file" id="import-file" accept=".json" onchange="importJSON(event)">
             <button onclick="toggleAnnotationsPanel()" style="font-weight:bold">&times; Close</button>
         </div>
     </div>
@@ -765,15 +756,12 @@ model-viewer {
     </div>
 </div>
 
-<!-- Recent annotations panel -->
-<div id="recent-panel">
-    <div class="rp-header">
-        <span>Recent Annotations</span>
-        <span class="rp-count" id="rp-count"></span>
-    </div>
-    <div class="rp-body" id="recent-body">
-        <div class="rp-empty">No annotations yet</div>
-    </div>
+
+
+<!-- Floating label popup menu -->
+<div id="fl-popup-menu">
+    <button class="fpm-item" id="fpm-edit">Edit Annotation</button>
+    <button class="fpm-item" id="fpm-view">View Part Annotations</button>
 </div>
 
 <!-- Floating 3D Annotation Labels (Potree-style) -->
@@ -788,7 +776,7 @@ model-viewer {
 
 <!-- Properties panel -->
 <div id="properties-panel">
-    <h3>Properties <button class="close-btn" onclick="closeProperties()">&times;</button></h3>
+    <h3>Properties <button class="close-btn" onclick="event.stopPropagation(); closeProperties()">&times;</button></h3>
     <div id="properties-content">
         <div class="no-selection">Click on a part to view its properties</div>
     </div>
@@ -799,7 +787,7 @@ model-viewer {
     src="model.glb"
     alt="3D Model"
     camera-controls
-    disable-pan
+    disable-tap
     touch-action="pan-y"
     shadow-intensity="0.3"
     exposure="0.7"
@@ -1183,6 +1171,7 @@ model-viewer {
     let annotations = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     let editingIndex = -1;
     let rightClickMeshName = '';
+    let rightClickHitPoint = null;
 
     function saveToStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
@@ -1190,43 +1179,66 @@ model-viewer {
         if (typeof buildFloatingLabels === 'function') buildFloatingLabels();
     }
 
-    // Right-click context menu
+    // Right-click: track drag vs tap for pan vs context menu
+    let rightDownPos = null;
+    let rightDownTime = 0;
+
+    viewer.addEventListener('pointerdown', (event) => {
+        if (event.button === 2) {
+            rightDownPos = { x: event.clientX, y: event.clientY };
+            rightDownTime = Date.now();
+        }
+    });
+
+    viewer.addEventListener('pointerup', (event) => {
+        if (event.button === 2 && rightDownPos) {
+            const dx = event.clientX - rightDownPos.x;
+            const dy = event.clientY - rightDownPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const elapsed = Date.now() - rightDownTime;
+            rightDownPos = null;
+
+            // Only show context menu if barely moved (tap, not drag/pan)
+            if (dist > 8 || elapsed > 400) return;
+
+            const internals = getInternals();
+            if (!internals) return;
+
+            const { scene, camera } = internals;
+            const rect = viewer.getBoundingClientRect();
+            const pointer = new THREE.Vector2(
+                ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                -((event.clientY - rect.top) / rect.height) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(pointer, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+            const hit = intersects.find(i => i.object.isMesh && i.object.visible);
+
+            if (hit) {
+                highlightMesh(hit.object);
+                showProperties(hit.object);
+                rightClickMeshName = hit.object.name || '(unnamed)';
+                rightClickHitPoint = { x: hit.point.x, y: hit.point.y, z: hit.point.z };
+
+                const menu = document.getElementById('context-menu');
+                menu.style.display = 'block';
+                menu.style.left = event.clientX + 'px';
+                menu.style.top = event.clientY + 'px';
+
+                requestAnimationFrame(() => {
+                    const mr = menu.getBoundingClientRect();
+                    if (mr.right > window.innerWidth) menu.style.left = (event.clientX - mr.width) + 'px';
+                    if (mr.bottom > window.innerHeight) menu.style.top = (event.clientY - mr.height) + 'px';
+                });
+            }
+        }
+    });
+
+    // Suppress browser context menu — pan handled by model-viewer natively
     viewer.addEventListener('contextmenu', (event) => {
         event.preventDefault();
-
-        // Raycast to find what was right-clicked
-        const internals = getInternals();
-        if (!internals) return;
-
-        const { scene, camera } = internals;
-        const rect = viewer.getBoundingClientRect();
-        const pointer = new THREE.Vector2(
-            ((event.clientX - rect.left) / rect.width) * 2 - 1,
-            -((event.clientY - rect.top) / rect.height) * 2 + 1
-        );
-
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(pointer, camera);
-        const intersects = raycaster.intersectObjects(scene.children, true);
-        const hit = intersects.find(i => i.object.isMesh && i.object.visible);
-
-        if (hit) {
-            highlightMesh(hit.object);
-            showProperties(hit.object);
-            rightClickMeshName = hit.object.name || '(unnamed)';
-
-            const menu = document.getElementById('context-menu');
-            menu.style.display = 'block';
-            menu.style.left = event.clientX + 'px';
-            menu.style.top = event.clientY + 'px';
-
-            // Keep menu within viewport
-            requestAnimationFrame(() => {
-                const mr = menu.getBoundingClientRect();
-                if (mr.right > window.innerWidth) menu.style.left = (event.clientX - mr.width) + 'px';
-                if (mr.bottom > window.innerHeight) menu.style.top = (event.clientY - mr.height) + 'px';
-            });
-        }
     });
 
     // Close context menu on any click
@@ -1291,6 +1303,13 @@ model-viewer {
             timestamp: new Date().toISOString()
         };
 
+        // Store exact 3D hit point for precise label positioning
+        if (editingIndex < 0 && rightClickHitPoint) {
+            entry.hitPoint = rightClickHitPoint;
+        } else if (editingIndex >= 0 && annotations[editingIndex] && annotations[editingIndex].hitPoint) {
+            entry.hitPoint = annotations[editingIndex].hitPoint;
+        }
+
         if (editingIndex >= 0) {
             annotations[editingIndex] = entry;
         } else {
@@ -1299,7 +1318,6 @@ model-viewer {
 
         saveToStorage();
         closeAnnotationModal();
-        renderRecentAnnotations();
         console.log('[3D Viewer] Annotation saved:', entry);
     };
 
@@ -1309,7 +1327,6 @@ model-viewer {
             saveToStorage();
             closeAnnotationModal();
             renderAnnotationsTable();
-            renderRecentAnnotations();
         }
     };
 
@@ -1344,7 +1361,7 @@ model-viewer {
         }
 
         let html = '<table><thead><tr>';
-        html += '<th>#</th><th>Equipment</th><th>Status</th><th>Inspector</th><th>Date</th><th>Remarks</th><th>Actions</th>';
+        html += '<th>#</th><th>Equipment</th><th>Status</th><th>Inspector</th><th>Date</th><th>Remarks</th><th>Action</th>';
         html += '</tr></thead><tbody>';
 
         data.forEach((a, idx) => {
@@ -1357,7 +1374,6 @@ model-viewer {
             html += '<td>' + escapeHtml(a.date || '-') + '</td>';
             html += '<td>' + escapeHtml(a.remarks || '-') + '</td>';
             html += '<td style="white-space:nowrap;">';
-            html += '<button onclick="locateAnnotation(' + realIdx + ')" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#4ade80;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-right:4px;">Locate</button>';
             html += '<button onclick="editAnnotationFromTable(' + realIdx + ')" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;">Edit</button>';
             html += '</td>';
             html += '</tr>';
@@ -1372,14 +1388,6 @@ model-viewer {
         if (!a) return;
         rightClickMeshName = a.meshName;
         openAnnotationForm(idx);
-    };
-
-    window.locateAnnotation = function(idx) {
-        const a = annotations[idx];
-        if (!a) return;
-        // Close the table panel, highlight part and show pin
-        document.getElementById('annotations-panel').classList.remove('visible');
-        findAndSelectMeshByName(a.meshName);
     };
 
     // ─── EXPORT / IMPORT ───
@@ -1413,62 +1421,7 @@ model-viewer {
         event.target.value = '';
     };
 
-    // ─── RECENT ANNOTATIONS PANEL ───
-    function dotClass(status) {
-        return status.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g, '');
-    }
 
-    function renderRecentAnnotations() {
-        const body = document.getElementById('recent-body');
-        const countEl = document.getElementById('rp-count');
-        countEl.textContent = annotations.length + ' total';
-
-        if (annotations.length === 0) {
-            body.innerHTML = '<div class="rp-empty">No annotations yet</div>';
-            return;
-        }
-
-        // Show last 8 annotations, newest first
-        const recent = [...annotations].reverse().slice(0, 8);
-        let html = '';
-        recent.forEach((a, i) => {
-            const realIdx = annotations.length - 1 - i;
-            html += '<div class="rp-item" onclick="navigateToAnnotation(' + realIdx + ')">';
-            html += '<div class="rp-top">';
-            html += '<span class="status-dot ' + dotClass(a.status) + '" title="' + escapeHtml(a.status) + '"></span>';
-            html += '<span class="rp-name">' + escapeHtml(a.equipmentName) + '</span>';
-            html += '<span class="rp-date">' + escapeHtml(a.date || '') + '</span>';
-            html += '</div>';
-            html += '<div class="rp-bottom">';
-            if (a.inspector) html += '<span style="font-size:10px;color:#6366f1;margin-right:6px;">' + escapeHtml(a.inspector) + '</span>';
-            html += '<span class="rp-remarks">' + escapeHtml(a.remarks || 'No remarks') + '</span>';
-            html += '</div>';
-            html += '</div>';
-        });
-        body.innerHTML = html;
-    }
-
-    window.navigateToAnnotation = function(idx) {
-        const a = annotations[idx];
-        if (!a) return;
-
-        // Highlight part and show pin
-        findAndSelectMeshByName(a.meshName);
-
-        // Open the annotations panel filtered to this part
-        rightClickMeshName = a.meshName;
-        toggleAnnotationsPanel(a.meshName);
-    };
-
-    window.editAnnotationFromRecent = function(idx) {
-        const a = annotations[idx];
-        if (!a) return;
-        rightClickMeshName = a.meshName;
-        openAnnotationForm(idx);
-    };
-
-    // Render on load
-    renderRecentAnnotations();
 
     // ─── POTREE-STYLE FLOATING 3D LABELS ───
     let floatingLabelsVisible = true;
@@ -1485,6 +1438,53 @@ model-viewer {
         const btn = document.getElementById('btn-labels');
         btn.classList.toggle('active', floatingLabelsVisible);
         labelsContainer.style.display = floatingLabelsVisible ? 'block' : 'none';
+    };
+
+    window.toggleAnnotationsDropdown = function(e) {
+        e.stopPropagation();
+        document.getElementById('annotations-dropdown').classList.toggle('visible');
+    };
+    window.closeAnnotationsDropdown = function() {
+        document.getElementById('annotations-dropdown').classList.remove('visible');
+    };
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('annotations-dropdown');
+        if (dropdown.classList.contains('visible') && !e.target.closest('.btn-group')) {
+            closeAnnotationsDropdown();
+        }
+        // Close floating label popup on outside click
+        const flPopup = document.getElementById('fl-popup-menu');
+        if (flPopup.classList.contains('visible') && !e.target.closest('#fl-popup-menu') && !e.target.closest('.float-label')) {
+            flPopup.classList.remove('visible');
+        }
+    });
+
+    // ─── FLOATING LABEL POPUP MENU ───
+    window.showFloatingLabelPopup = function(e, meshName, annotationIndex) {
+        const popup = document.getElementById('fl-popup-menu');
+
+        // Wire up the buttons
+        document.getElementById('fpm-edit').onclick = function() {
+            popup.classList.remove('visible');
+            rightClickMeshName = meshName;
+            openAnnotationForm(annotationIndex);
+        };
+        document.getElementById('fpm-view').onclick = function() {
+            popup.classList.remove('visible');
+            toggleAnnotationsPanel(meshName);
+        };
+
+        // Position near the click
+        popup.style.left = e.clientX + 'px';
+        popup.style.top = e.clientY + 'px';
+        popup.classList.add('visible');
+
+        // Adjust if overflowing viewport
+        requestAnimationFrame(() => {
+            const r = popup.getBoundingClientRect();
+            if (r.right > window.innerWidth) popup.style.left = (e.clientX - r.width) + 'px';
+            if (r.bottom > window.innerHeight) popup.style.top = (e.clientY - r.height) + 'px';
+        });
     };
 
     function buildFloatingLabels() {
@@ -1519,13 +1519,13 @@ model-viewer {
                 '<div class="fl-stem"></div>' +
                 '<div class="fl-anchor"></div>';
 
-            el.addEventListener('click', () => {
-                rightClickMeshName = meshName;
-                openAnnotationForm(index);
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showFloatingLabelPopup(e, meshName, index);
             });
 
             labelsContainer.appendChild(el);
-            labelElements.push({ el, meshName, annotation });
+            labelElements.push({ el, meshName, annotation, hitPoint: annotation.hitPoint || null });
         });
 
         // Start the projection loop if not running
@@ -1557,8 +1557,14 @@ model-viewer {
                 return;
             }
 
-            const bb = new THREE.Box3().setFromObject(mesh);
-            const center = bb.getCenter(new THREE.Vector3());
+            // Use stored hit point for precise positioning, fall back to bounding box center
+            let center;
+            if (item.hitPoint) {
+                center = new THREE.Vector3(item.hitPoint.x, item.hitPoint.y, item.hitPoint.z);
+            } else {
+                const bb = new THREE.Box3().setFromObject(mesh);
+                center = bb.getCenter(new THREE.Vector3());
+            }
 
             // Project to screen
             const projected = center.clone().project(camera);
