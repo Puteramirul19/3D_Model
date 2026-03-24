@@ -1,0 +1,365 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Model Viewer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+    width: 100%; 
+    height: 100vh; 
+    overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #121212;
+    color: #e0e0e0;
+}
+canvas { display: block; }
+
+/* Toolbar */
+#toolbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: rgba(18, 18, 18, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 100;
+}
+#toolbar .title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: #fff;
+}
+#toolbar .controls {
+    display: flex;
+    gap: 6px;
+}
+#toolbar button {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #ccc;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+#toolbar button:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+}
+#toolbar button.active {
+    background: rgba(99, 102, 241, 0.3);
+    border-color: rgba(99, 102, 241, 0.5);
+    color: #a5b4fc;
+}
+
+/* Help panel */
+#help-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(18, 18, 18, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 12px;
+    z-index: 100;
+    line-height: 1.8;
+    transition: opacity 0.3s;
+}
+#help-panel .key {
+    display: inline-block;
+    background: rgba(255,255,255,0.1);
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-right: 6px;
+    min-width: 60px;
+    text-align: center;
+}
+
+/* Loading overlay */
+#loading-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(18, 18, 18, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    transition: opacity 0.5s;
+}
+#loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.loader-content {
+    text-align: center;
+}
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-content p {
+    font-size: 14px;
+    color: #aaa;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Toolbar -->
+<div id="toolbar">
+    <span class="title">3D Model Viewer</span>
+    <div class="controls">
+        <button id="btn-rotate" onclick="toggleRotate()">Auto Rotate</button>
+        <button id="btn-wireframe" onclick="toggleBackground()">Light BG</button>
+        <button id="btn-reset" onclick="resetView()">Reset View</button>
+        <button id="btn-help" class="active" onclick="toggleHelp()">Help</button>
+        <label style="display:flex;align-items:center;gap:6px;color:#aaa;font-size:12px;">Brightness
+            <input type="range" id="brightness-slider" min="0.2" max="3.0" step="0.05" value="1.0"
+                style="width:80px;accent-color:#6366f1;" oninput="setBrightness(this.value)">
+        </label>
+    </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+    <div class="loader-content">
+        <div class="spinner"></div>
+        <p id="loading-text">Loading 3D Model...</p>
+    </div>
+</div>
+
+<!-- Help panel -->
+<div id="help-panel">
+    <span class="key">Left Click</span> Rotate model<br>
+    <span class="key">Scroll</span> Zoom in / out<br>
+    <span class="key">Right Click</span> Pan view
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1e1e1e);
+
+const camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.01,
+    10000
+);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotate = false;
+controls.autoRotateSpeed = 2.0;
+
+// Store default camera state for reset
+let defaultCameraPos = new THREE.Vector3(0, 0, 5);
+let defaultTarget = new THREE.Vector3(0, 0, 0);
+
+// Lighting
+const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight1.position.set(5, 10, 7);
+dirLight1.castShadow = true;
+scene.add(dirLight1);
+
+const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+dirLight2.position.set(-5, -5, -5);
+scene.add(dirLight2);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambient);
+
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+hemiLight.position.set(0, 20, 0);
+scene.add(hemiLight);
+
+// Brightness base values
+const baseLights = { dir1: 0.8, dir2: 0.4, ambient: 0.5, hemi: 0.3 };
+
+function setupModel(object) {
+    // Center and auto-scale
+    const box = new THREE.Box3().setFromObject(object);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+
+    object.position.sub(center);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 0) {
+        const scale = 2 / maxDim;
+        object.scale.multiplyScalar(scale);
+    }
+
+    object.traverse(function(node) {
+        if (node.isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+        }
+    });
+
+    scene.add(object);
+
+    // Position camera to see the whole model (object is now centered at origin)
+    camera.position.set(0, 1, 4);
+    camera.lookAt(0, 0, 0);
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    // Store defaults for reset
+    defaultCameraPos.copy(camera.position);
+    defaultTarget.set(0, 0, 0);
+
+    // Hide loading
+    document.getElementById('loading-overlay').classList.add('hidden');
+    console.log('Model loaded successfully');
+}
+
+// Load model
+const mtlLoader = new THREE.MTLLoader();
+mtlLoader.load('model.mtl', function(materials) {
+    materials.preload();
+
+    const objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+
+    objLoader.load('model.obj', function(object) {
+        try {
+            setupModel(object);
+        } catch (e) {
+            console.error('Error processing model:', e);
+            document.getElementById('loading-text').textContent = 'Error processing model: ' + e.message;
+        }
+    }, function(progress) {
+        if (progress.total > 0) {
+            var pct = Math.round((progress.loaded / progress.total) * 100);
+            document.getElementById('loading-text').textContent = 'Loading 3D Model... ' + pct + '%';
+        }
+    }, function(error) {
+        console.error('Error loading OBJ:', error);
+        document.getElementById('loading-text').textContent = 'Error loading model.';
+    });
+}, function(progress) {
+    if (progress.total > 0) {
+        var pct = Math.round((progress.loaded / progress.total) * 100);
+        document.getElementById('loading-text').textContent = 'Loading materials... ' + pct + '%';
+    }
+}, function(error) {
+    console.error('Error loading MTL:', error);
+    document.getElementById('loading-text').textContent = 'Loading without materials...';
+
+    // Fallback: load OBJ without materials
+    const objLoader = new THREE.OBJLoader();
+    objLoader.load('model.obj', function(object) {
+        try {
+            setupModel(object);
+        } catch (e) {
+            console.error('Error processing model:', e);
+            document.getElementById('loading-text').textContent = 'Error: ' + e.message;
+        }
+    }, null, function(err) {
+        document.getElementById('loading-text').textContent = 'Error: Could not load model.';
+    });
+});
+
+// --- Toolbar functions ---
+
+function toggleRotate() {
+    var btn = document.getElementById('btn-rotate');
+    controls.autoRotate = !controls.autoRotate;
+    btn.classList.toggle('active', controls.autoRotate);
+}
+
+function toggleBackground() {
+    var btn = document.getElementById('btn-wireframe');
+    var isDark = scene.background.getHex() !== 0xf0f0f0;
+    if (isDark) {
+        scene.background.set(0xf0f0f0);
+        btn.classList.add('active');
+        btn.textContent = 'Dark BG';
+    } else {
+        scene.background.set(0x1e1e1e);
+        btn.classList.remove('active');
+        btn.textContent = 'Light BG';
+    }
+}
+
+function toggleHelp() {
+    var panel = document.getElementById('help-panel');
+    var btn = document.getElementById('btn-help');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        btn.classList.add('active');
+    } else {
+        panel.style.display = 'none';
+        btn.classList.remove('active');
+    }
+}
+
+function setBrightness(val) {
+    var v = parseFloat(val);
+    dirLight1.intensity = baseLights.dir1 * v;
+    dirLight2.intensity = baseLights.dir2 * v;
+    ambient.intensity = baseLights.ambient * v;
+    hemiLight.intensity = baseLights.hemi * v;
+}
+
+function resetView() {
+    camera.position.copy(defaultCameraPos);
+    controls.target.copy(defaultTarget);
+    controls.update();
+}
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Animation loop
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+
+animate();
+</script>
+
+</body>
+</html>
