@@ -719,8 +719,10 @@ model-viewer {
 <div id="annotation-modal" class="modal-overlay">
     <div class="modal">
         <h3 id="modal-title">Add Annotation</h3>
+        <label>Annotation Name</label>
+        <input type="text" id="ann-name" placeholder="Annotation name">
         <label>Equipment Name</label>
-        <input type="text" id="ann-equipment" placeholder="Equipment name">
+        <input type="text" id="ann-equipment" readonly style="opacity:0.6;cursor:default;">
         <label>Status</label>
         <select id="ann-status">
             <option value="Good">Good</option>
@@ -1072,10 +1074,9 @@ model-viewer {
         const internals = getInternals();
         if (!internals) return;
 
-        const { camera } = internals;
-        // Force-update matrices so projection uses current frame data
-        camera.updateMatrixWorld(true);
-        pinTarget.updateMatrixWorld(true);
+        const { scene: pinScene, camera } = internals;
+        // Force-update entire scene tree from root so all matrices are current
+        pinScene.updateMatrixWorld(true);
         const bb = new THREE.Box3().setFromObject(pinTarget);
         const center = bb.getCenter(new THREE.Vector3());
 
@@ -1175,6 +1176,7 @@ model-viewer {
     let editingIndex = -1;
     let rightClickMeshName = '';
     let rightClickHitPoint = null;
+    let rightClickHitPointLocal = null;
 
     function saveToStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
@@ -1224,6 +1226,9 @@ model-viewer {
                 showProperties(hit.object);
                 rightClickMeshName = hit.object.name || '(unnamed)';
                 rightClickHitPoint = { x: hit.point.x, y: hit.point.y, z: hit.point.z };
+                // Store in mesh local space for accurate tracking across view changes
+                const localPt = hit.object.worldToLocal(hit.point.clone());
+                rightClickHitPointLocal = { x: localPt.x, y: localPt.y, z: localPt.z };
 
                 const menu = document.getElementById('context-menu');
                 menu.style.display = 'block';
@@ -1257,6 +1262,7 @@ model-viewer {
             // Editing existing
             editingIndex = index;
             const a = annotations[index];
+            document.getElementById('ann-name').value = a.annotationName || '';
             document.getElementById('ann-equipment').value = a.equipmentName;
             document.getElementById('ann-status').value = a.status;
             document.getElementById('ann-inspector').value = a.inspector || '';
@@ -1267,6 +1273,7 @@ model-viewer {
         } else {
             // New annotation
             editingIndex = -1;
+            document.getElementById('ann-name').value = '';
             document.getElementById('ann-equipment').value = rightClickMeshName;
             document.getElementById('ann-status').value = 'Good';
             document.getElementById('ann-inspector').value = localStorage.getItem('3d_inspector_name') || '';
@@ -1285,19 +1292,21 @@ model-viewer {
     };
 
     window.saveAnnotation = function() {
+        const annotationName = document.getElementById('ann-name').value.trim();
         const equipmentName = document.getElementById('ann-equipment').value.trim();
         const status = document.getElementById('ann-status').value;
         const inspector = document.getElementById('ann-inspector').value.trim();
         const date = document.getElementById('ann-date').value;
         const remarks = document.getElementById('ann-remarks').value.trim();
 
-        if (!equipmentName) { alert('Please enter an equipment name'); return; }
+        if (!annotationName) { alert('Please enter an annotation name'); return; }
 
         // Remember inspector name for next time
         if (inspector) localStorage.setItem('3d_inspector_name', inspector);
 
         const entry = {
             meshName: rightClickMeshName,
+            annotationName,
             equipmentName,
             status,
             inspector,
@@ -1309,8 +1318,10 @@ model-viewer {
         // Store exact 3D hit point for precise label positioning
         if (editingIndex < 0 && rightClickHitPoint) {
             entry.hitPoint = rightClickHitPoint;
-        } else if (editingIndex >= 0 && annotations[editingIndex] && annotations[editingIndex].hitPoint) {
-            entry.hitPoint = annotations[editingIndex].hitPoint;
+            entry.hitPointLocal = rightClickHitPointLocal;
+        } else if (editingIndex >= 0 && annotations[editingIndex]) {
+            entry.hitPoint = annotations[editingIndex].hitPoint || null;
+            entry.hitPointLocal = annotations[editingIndex].hitPointLocal || null;
         }
 
         if (editingIndex >= 0) {
@@ -1364,13 +1375,14 @@ model-viewer {
         }
 
         let html = '<table><thead><tr>';
-        html += '<th>#</th><th>Equipment</th><th>Status</th><th>Inspector</th><th>Date</th><th>Remarks</th><th>Action</th>';
+        html += '<th>#</th><th>Annotation</th><th>Equipment</th><th>Status</th><th>Inspector</th><th>Date</th><th>Remarks</th><th>Action</th>';
         html += '</tr></thead><tbody>';
 
         data.forEach((a, idx) => {
             const realIdx = annotations.indexOf(a);
             html += '<tr>';
             html += '<td>' + (idx + 1) + '</td>';
+            html += '<td>' + escapeHtml(a.annotationName || '-') + '</td>';
             html += '<td>' + escapeHtml(a.equipmentName) + '</td>';
             html += '<td><span class="status-badge ' + statusClass(a.status) + '">' + escapeHtml(a.status) + '</span></td>';
             html += '<td>' + escapeHtml(a.inspector || '-') + '</td>';
@@ -1513,7 +1525,7 @@ model-viewer {
             el.innerHTML =
                 '<div class="fl-bubble">' +
                     '<span class="fl-dot ' + dot + '"></span>' +
-                    '<span class="fl-title">' + escapeHtml(annotation.equipmentName) + '</span>' +
+                    '<span class="fl-title">' + escapeHtml(annotation.annotationName || annotation.equipmentName) + '</span>' +
                 '</div>' +
                 (remarkText || metaText ? '<div class="fl-expand">' +
                     (remarkText ? '<div>' + remarkText + '</div>' : '') +
@@ -1528,7 +1540,24 @@ model-viewer {
             });
 
             labelsContainer.appendChild(el);
-            labelElements.push({ el, meshName, annotation, hitPoint: annotation.hitPoint || null });
+
+            // Prepare local-space hit point for accurate tracking
+            let hitPointLocal = annotation.hitPointLocal || null;
+            // Backward compat: migrate old world-space-only hitPoint to local space
+            if (!hitPointLocal && annotation.hitPoint) {
+                const mesh = findMeshByName(meshName);
+                if (mesh) {
+                    mesh.updateMatrixWorld(true);
+                    const wp = new THREE.Vector3(annotation.hitPoint.x, annotation.hitPoint.y, annotation.hitPoint.z);
+                    const lp = mesh.worldToLocal(wp);
+                    hitPointLocal = { x: lp.x, y: lp.y, z: lp.z };
+                    // Persist the migration so it only happens once
+                    annotation.hitPointLocal = hitPointLocal;
+                    saveToStorage();
+                }
+            }
+
+            labelElements.push({ el, meshName, annotation, hitPoint: annotation.hitPoint || null, hitPointLocal });
         });
 
         // Start the projection loop if not running
@@ -1551,8 +1580,8 @@ model-viewer {
         }
 
         const { scene: threeScene, camera } = internals;
-        // Force-update camera matrices so projection uses current frame data
-        camera.updateMatrixWorld(true);
+        // Force-update entire scene tree from root so all matrices are current
+        threeScene.updateMatrixWorld(true);
         const rect = viewer.getBoundingClientRect();
 
         labelElements.forEach(item => {
@@ -1562,12 +1591,12 @@ model-viewer {
                 return;
             }
 
-            // Force-update mesh world matrix for accurate bounding box / position
-            mesh.updateMatrixWorld(true);
-
-            // Use stored hit point for precise positioning, fall back to bounding box center
+            // Compute world position: prefer local-space point converted via current mesh matrix
             let center;
-            if (item.hitPoint) {
+            if (item.hitPointLocal) {
+                center = new THREE.Vector3(item.hitPointLocal.x, item.hitPointLocal.y, item.hitPointLocal.z);
+                mesh.localToWorld(center);
+            } else if (item.hitPoint) {
                 center = new THREE.Vector3(item.hitPoint.x, item.hitPoint.y, item.hitPoint.z);
             } else {
                 const bb = new THREE.Box3().setFromObject(mesh);
@@ -1696,6 +1725,7 @@ model-viewer {
         // ── Table ──
         const rows = annotations.map((a, i) => [
             i + 1,
+            a.annotationName || '-',
             a.equipmentName,
             a.status,
             a.inspector || '-',
@@ -1705,7 +1735,7 @@ model-viewer {
 
         doc.autoTable({
             startY: y,
-            head: [['#', 'Equipment Name', 'Status', 'Inspector', 'Date', 'Remarks']],
+            head: [['#', 'Annotation', 'Equipment Name', 'Status', 'Inspector', 'Date', 'Remarks']],
             body: rows,
             margin: { left: margin, right: margin },
             styles: {
@@ -1728,15 +1758,16 @@ model-viewer {
             },
             columnStyles: {
                 0: { cellWidth: 10, halign: 'center' },
-                1: { cellWidth: 75 },
-                2: { cellWidth: 28 },
-                3: { cellWidth: 30 },
-                4: { cellWidth: 25 },
-                5: { cellWidth: 'auto' }
+                1: { cellWidth: 40 },
+                2: { cellWidth: 55 },
+                3: { cellWidth: 25 },
+                4: { cellWidth: 28 },
+                5: { cellWidth: 22 },
+                6: { cellWidth: 'auto' }
             },
             didParseCell: function(data) {
                 // Color-code status column
-                if (data.section === 'body' && data.column.index === 2) {
+                if (data.section === 'body' && data.column.index === 3) {
                     const val = data.cell.raw;
                     if (val === 'Good') data.cell.styles.textColor = [22, 163, 74];
                     else if (val === 'Needs Repair') data.cell.styles.textColor = [180, 130, 0];
