@@ -706,7 +706,7 @@ model-viewer {
     <span class="key">Left Click</span> Select part<br>
     <span class="key">Right Click</span> Add annotation<br>
     <span class="key">Left Drag</span> Rotate model<br>
-    <span class="key">Right Drag</span> Pan / move view<br>
+    <span class="key">Right Drag</span> Move view<br>
     <span class="key">Scroll</span> Zoom in / out
 </div>
 
@@ -1073,6 +1073,9 @@ model-viewer {
         if (!internals) return;
 
         const { camera } = internals;
+        // Force-update matrices so projection uses current frame data
+        camera.updateMatrixWorld(true);
+        pinTarget.updateMatrixWorld(true);
         const bb = new THREE.Box3().setFromObject(pinTarget);
         const center = bb.getCenter(new THREE.Vector3());
 
@@ -1548,6 +1551,8 @@ model-viewer {
         }
 
         const { scene: threeScene, camera } = internals;
+        // Force-update camera matrices so projection uses current frame data
+        camera.updateMatrixWorld(true);
         const rect = viewer.getBoundingClientRect();
 
         labelElements.forEach(item => {
@@ -1556,6 +1561,9 @@ model-viewer {
                 item.el.classList.add('hidden');
                 return;
             }
+
+            // Force-update mesh world matrix for accurate bounding box / position
+            mesh.updateMatrixWorld(true);
 
             // Use stored hit point for precise positioning, fall back to bounding box center
             let center;
@@ -1575,11 +1583,11 @@ model-viewer {
                 return;
             }
 
-            const x = (projected.x * 0.5 + 0.5) * rect.width;
-            const y = (-projected.y * 0.5 + 0.5) * rect.height;
+            const x = (projected.x * 0.5 + 0.5) * rect.width + rect.left;
+            const y = (-projected.y * 0.5 + 0.5) * rect.height + rect.top;
 
-            // Out-of-bounds check
-            if (x < -100 || x > rect.width + 100 || y < -100 || y > rect.height + 100) {
+            // Out-of-bounds check (using absolute screen coordinates)
+            if (x < rect.left - 100 || x > rect.right + 100 || y < rect.top - 100 || y > rect.bottom + 100) {
                 item.el.classList.add('hidden');
                 return;
             }
