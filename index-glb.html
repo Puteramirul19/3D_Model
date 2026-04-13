@@ -960,20 +960,36 @@ model-viewer {
     }
 
     function highlightMesh(mesh) {
+        // Guard: check if mesh and material exist
+        if (!mesh || !mesh.material) {
+            console.warn('[3D Viewer] Warning: highlightMesh called with invalid mesh or material:', mesh);
+            return;
+        }
+
         clearHighlight();
         selectedMesh = mesh;
 
         if (!originalMaterials.has(mesh)) {
-            originalMaterials.set(mesh, {
-                emissive: mesh.material.emissive.clone(),
-                emissiveIntensity: mesh.material.emissiveIntensity
-            });
+            // Guard: check if emissive property exists
+            if (mesh.material.emissive && typeof mesh.material.emissive.clone === 'function') {
+                originalMaterials.set(mesh, {
+                    emissive: mesh.material.emissive.clone(),
+                    emissiveIntensity: mesh.material.emissiveIntensity
+                });
+            } else {
+                console.warn('[3D Viewer] Warning: mesh.material.emissive is invalid:', mesh.material.emissive);
+                return;
+            }
         }
 
-        mesh.material.emissive.setHex(0x4444ff);
-        mesh.material.emissiveIntensity = 0.6;
-        mesh.material.needsUpdate = true;
-        forceRender();
+        try {
+            mesh.material.emissive.setHex(0x4444ff);
+            mesh.material.emissiveIntensity = 0.6;
+            mesh.material.needsUpdate = true;
+            forceRender();
+        } catch(error) {
+            console.error('[3D Viewer] Error highlighting mesh:', error);
+        }
     }
 
     // ─── RAYCASTING — detect click vs drag ───
@@ -1011,11 +1027,14 @@ model-viewer {
         raycaster.setFromCamera(pointer, camera);
 
         const intersects = raycaster.intersectObjects(scene.children, true);
-        const hit = intersects.find(i => i.object.isMesh && i.object.visible);
+        const hit = intersects.find(i => i.object.isMesh && i.object.visible && i.object.material);
 
-        if (hit) {
+        if (hit && hit.object) {
             console.log('[3D Viewer] Selected:', hit.object.name || '(unnamed)', hit.object);
-            highlightMesh(hit.object);
+            // Guard: ensure object has material before highlighting
+            if (hit.object.material) {
+                highlightMesh(hit.object);
+            }
             showProperties(hit.object);
         } else {
             clearHighlight();
